@@ -72,7 +72,6 @@ function HomePageComponent(props) {
             <div style={{}}>
 
                 <div>
-
                     {/* {ScannedQr === FetchedCar?.data[0].qr_str ? */}
                     {FetchedCar?.data[0].qr_str ?
                         <Container className='driver_info_container' style={{ padding: 0 }}>

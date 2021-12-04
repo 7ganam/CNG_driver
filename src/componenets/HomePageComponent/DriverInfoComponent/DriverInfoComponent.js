@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState, useRef, useCallback } from 'react'
+
 import './DriverInfoComponent.css'
-import { useState } from 'react'
 import MapComponent from './MapComponent/MapComponent'
 import { Alert } from 'reactstrap';
 import moment from 'moment';
@@ -38,6 +38,90 @@ function DriverInfoComponent(props) {
     }
 
 
+
+    // state for the gauge component -- this is defined here so the bluetooth connection is still available when user navigate out of the dial component
+    const [GasReading, setGasReading] = useState(0)
+    // 
+    // let myCharacteristic;
+    let myCharacteristic = useRef(null)
+
+    const handleNotifications = useCallback((event) => {
+        const value = new TextDecoder().decode(event.target.value);
+        let _receiveBuffer = '';
+        for (const c of value) {
+            if (c === ';') {
+                const data = _receiveBuffer.trim();
+                _receiveBuffer = '';
+                if (data) {
+                    console.log('> ' + data / 5);
+                    setGasReading(data / 5)
+                }
+            } else {
+                _receiveBuffer += c;
+            }
+        }
+    }, [])
+
+    const onStartButtonClick = useCallback(async () => {
+        let serviceUuid = '0xFFE0';
+        if (serviceUuid.startsWith('0x')) {
+            serviceUuid = parseInt(serviceUuid);
+        }
+
+        let characteristicUuid = '0xFFE1';
+        if (characteristicUuid.startsWith('0x')) {
+            characteristicUuid = parseInt(characteristicUuid);
+        }
+
+        try {
+            console.log('Requesting Bluetooth Device...');
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [serviceUuid] }]
+            });
+
+            console.log('Connecting to GATT Server...');
+            const server = await device.gatt.connect();
+
+            console.log('Getting Service...');
+            const service = await server.getPrimaryService(serviceUuid);
+
+            console.log('Getting Characteristic...');
+            myCharacteristic.current = await service.getCharacteristic(characteristicUuid);
+
+            await myCharacteristic.current.startNotifications();
+
+            console.log('> Notifications started');
+            myCharacteristic.current.addEventListener('characteristicvaluechanged',
+                handleNotifications);
+        } catch (error) {
+            console.log('Argh! ' + error);
+        }
+    }, [myCharacteristic, handleNotifications])
+
+    const onStopButtonClick = useCallback(async () => {
+        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>. ');
+        if (myCharacteristic.current) {
+            try {
+                console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>. ');
+                myCharacteristic.current.removeEventListener('characteristicvaluechanged',
+                    handleNotifications);
+                await myCharacteristic.current.stopNotifications();
+                console.log('> Notifications stopped');
+                myCharacteristic.current.removeEventListener('characteristicvaluechanged',
+                    handleNotifications);
+            } catch (error) {
+                console.log('Argh! ' + error);
+            }
+        }
+    }, [myCharacteristic, handleNotifications])
+
+
+
+
+
+
+
+
     const [Display, setDisplay] = useState('maint')
     const display_body = (display_state) => {
         if (display_state === 'maint') {
@@ -52,7 +136,7 @@ function DriverInfoComponent(props) {
 
             return (
                 <div>
-                    <GuageComponent />
+                    <GuageComponent onStopButtonClick={onStopButtonClick} onStartButtonClick={onStartButtonClick} GasReading={GasReading} />
                 </div>
             )
         }

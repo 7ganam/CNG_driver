@@ -72,9 +72,9 @@ function HomePageComponent(props) {
             <div style={{}}>
 
                 <div>
-                    {/* {FetchedCar?.data[0].qr_str ? */}
-                    {ScannedQr === FetchedCar?.data[0].qr_str ?
 
+                    {/* {ScannedQr === FetchedCar?.data[0].qr_str ? */}
+                    {FetchedCar?.data[0].qr_str ?
                         <Container className='driver_info_container' style={{ padding: 0 }}>
                             {/* {Find_maint_state(FetchedCar?.data[0])} */}
                             <DriverInfoComponent car={FetchedCar?.data[0]} />
